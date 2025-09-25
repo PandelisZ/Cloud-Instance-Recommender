@@ -33,57 +33,93 @@
       </header>
 
       <main class="main-content">
-        <!-- Sample CSV Template Section -->
-        <section class="section">
-          <div class="section-header" onclick="toggleSection(this)">
-            <span class="section-icon">📄</span>
-            <h2 class="section-title">Sample CSV Template</h2>
-            <span class="toggle-icon">▲</span>
-          </div>
-          <div class="section-content">
-            <p class="template-description">
-              View and download the standard CSV format for optimal
-              auto-mapping:
-            </p>
-
-            <div class="sample-csv">
-              <pre>
-VM Name,CPU Count,Memory (GB),CPU Utilization,Memory Utilization,GCP Region
-web-server-01,4,16,45,60,us-central1-a
-db-server-02,8,32,70,80,us-west1-b
-app-server-03,2,8,35,45,europe-west1-c</pre
-              >
-            </div>
-
-            <button class="btn btn-secondary" onclick="downloadGCPSampleCSV()">
-              📥 Download Sample CSV
-            </button>
-          </div>
-        </section>
-
-        <!-- File Upload Section -->
+        <!-- Define Infrastructure via Form -->
         <section class="section">
           <div class="section-header">
-            <span class="section-icon">📁</span>
-            <h2 class="section-title">Upload CSV File</h2>
+            <span class="section-icon">📝</span>
+            <h2 class="section-title">Define Your Infrastructure</h2>
           </div>
           <div class="section-content">
-            <div class="form-group">
-              <div class="file-upload">
-                <input type="file" id="csvFile" accept=".csv" />
-                <label for="csvFile" class="file-upload-label">
-                  <div class="upload-icon">📤</div>
-                  <div><strong>Click to upload CSV file</strong></div>
-                  <div style="color: #666; margin-top: 5px">
-                    or drag and drop your file here
-                  </div>
-                </label>
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label">VM Name</label>
+                <input
+                  type="text"
+                  id="vmNameInput"
+                  class="form-control"
+                  placeholder="e.g., web-server-01"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">CPU Count (vCPUs)</label>
+                <input
+                  type="number"
+                  id="cpuCountInput"
+                  class="form-control"
+                  min="1"
+                  placeholder="e.g., 4"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Memory (GB)</label>
+                <input
+                  type="number"
+                  id="memoryGbInput"
+                  class="form-control"
+                  min="1"
+                  step="0.1"
+                  placeholder="e.g., 16"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">CPU Utilization (%)</label>
+                <input
+                  type="number"
+                  id="cpuUtilInput"
+                  class="form-control"
+                  min="0"
+                  max="100"
+                  placeholder="optional"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Memory Utilization (%)</label>
+                <input
+                  type="number"
+                  id="memUtilInput"
+                  class="form-control"
+                  min="0"
+                  max="100"
+                  placeholder="optional"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">GCP Region</label>
+                <input
+                  type="text"
+                  id="gcpRegionInput"
+                  class="form-control"
+                  placeholder="e.g., us-central1-a"
+                />
               </div>
             </div>
-            <div id="fileStatus" class="hidden"></div>
-            <!-- Placeholders for stats and preview -->
-            <div id="fileStatsSection" class="hidden"></div>
-            <div id="dataPreviewSection" class="hidden"></div>
+
+            <div class="form-group">
+              <button class="btn btn-secondary" onclick="addInfraEntry('gcp')">
+                ➕ Add VM
+              </button>
+            </div>
+
+            <div id="infraListSection" class="hidden">
+              <div class="sample-csv">
+                <div style="overflow-x: auto;">
+                  <table
+                    id="infraTable"
+                    style="width: 100%; border-collapse: collapse; font-size: 12px;"
+                  ></table>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

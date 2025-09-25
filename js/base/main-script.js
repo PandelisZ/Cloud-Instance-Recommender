@@ -7,6 +7,9 @@ let columnHeaders = [];
 let selectedProviders = [];
 let processedResults = null;
 
+// Manual infrastructure entries (from UI form)
+let manualInfraEntries = [];
+
 // Enhanced exclude types data - now references provider-specific data
 const excludeTypesData = {
   aws: [], // Will be populated from aws-specific.js
@@ -53,7 +56,7 @@ document.addEventListener("DOMContentLoaded", function () {
     );
   }
 
-  // Add file upload event handler
+  // Add file upload event handler (optional - UI may not have csvFile)
   const fileInput = document.getElementById("csvFile");
   if (fileInput) {
     fileInput.addEventListener("change", handleFileUpload);
@@ -234,18 +237,20 @@ function parseCSV(csvText) {
   );
 
   const fileStatus = document.getElementById("fileStatus");
-  if (missingColumns.length > 0) {
-    fileStatus.className = "alert alert-warning";
-    fileStatus.innerHTML = `⚠️ Missing required columns: ${missingColumns.join(
-      ", "
-    )}. Please check your CSV format.`;
-    console.warn("Missing required columns:", missingColumns);
-  } else {
-    fileStatus.className = "alert alert-success";
-    fileStatus.innerHTML = `✅ File loaded successfully: ${csvData.length} rows, ${headers.length} columns`;
-    console.log("File validation successful");
+  if (fileStatus) {
+    if (missingColumns.length > 0) {
+      fileStatus.className = "alert alert-warning";
+      fileStatus.innerHTML = `⚠️ Missing required columns: ${missingColumns.join(
+        ", "
+      )}. Please check your CSV format.`;
+      console.warn("Missing required columns:", missingColumns);
+    } else {
+      fileStatus.className = "alert alert-success";
+      fileStatus.innerHTML = `✅ File loaded successfully: ${csvData.length} rows, ${headers.length} columns`;
+      console.log("File validation successful");
+    }
+    fileStatus.classList.remove("hidden");
   }
-  fileStatus.classList.remove("hidden");
 
   // Show file statistics
   showFileStatistics();
@@ -810,15 +815,189 @@ function getSelectedGCPMachineTypes() {
   return selected;
 }
 
+/* Manual infrastructure form support */
+
+// Add VM entry from the form into manualInfraEntries
+function addInfraEntry(providerHint) {
+  const vmName = document.getElementById("vmNameInput")?.value.trim() || "";
+  const cpuVal = parseInt(
+    document.getElementById("cpuCountInput")?.value.trim() || "0",
+    10
+  );
+  const memVal = parseFloat(
+    document.getElementById("memoryGbInput")?.value.trim() || "0"
+  );
+  const cpuUtilRaw = document.getElementById("cpuUtilInput")?.value.trim() || "";
+  const memUtilRaw = document.getElementById("memUtilInput")?.value.trim() || "";
+
+  const awsRegionEl = document.getElementById("awsRegionInput");
+  const azureRegionEl = document.getElementById("azureRegionInput");
+  const gcpRegionEl = document.getElementById("gcpRegionInput");
+
+  if (!vmName || !cpuVal || !memVal) {
+    alert("Please fill VM Name, CPU Count, and Memory (GB).");
+    return;
+  }
+
+  const entry = {
+    vmName,
+    cpu: cpuVal,
+    memory: memVal,
+    cpuUtil: cpuUtilRaw !== "" ? parseFloat(cpuUtilRaw) : "",
+    memUtil: memUtilRaw !== "" ? parseFloat(memUtilRaw) : "",
+  };
+
+  if (awsRegionEl) entry.awsRegion = awsRegionEl.value.trim();
+  if (azureRegionEl) entry.azureRegion = azureRegionEl.value.trim();
+  if (gcpRegionEl) entry.gcpRegion = gcpRegionEl.value.trim();
+
+  manualInfraEntries.push(entry);
+  renderInfraTable();
+  clearInfraInputs();
+}
+
+// Clear form inputs after adding
+function clearInfraInputs() {
+  ["vmNameInput", "cpuCountInput", "memoryGbInput", "cpuUtilInput", "memUtilInput", "awsRegionInput", "azureRegionInput", "gcpRegionInput"].forEach(
+    (id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    }
+  );
+}
+
+// Remove a VM entry
+function removeInfraEntry(index) {
+  if (index >= 0 && index < manualInfraEntries.length) {
+    manualInfraEntries.splice(index, 1);
+    renderInfraTable();
+  }
+}
+
+// Render the infra entries table
+function renderInfraTable() {
+  const listSection = document.getElementById("infraListSection");
+  const table = document.getElementById("infraTable");
+  if (!listSection || !table) return;
+
+  listSection.classList.remove("hidden");
+
+  const hasAWS = !!document.getElementById("awsRegionInput");
+  const hasAzure = !!document.getElementById("azureRegionInput");
+  const hasGCP = !!document.getElementById("gcpRegionInput");
+
+  const headers = [
+    "VM Name",
+    "CPU Count",
+    "Memory (GB)",
+    "CPU Utilization",
+    "Memory Utilization",
+  ];
+  if (hasAWS) headers.push("AWS Region");
+  if (hasAzure) headers.push("Azure Region");
+  if (hasGCP) headers.push("GCP Region");
+  headers.push("Actions");
+
+  let html = "<thead><tr>";
+  headers.forEach(
+    (h) =>
+      (html += `<th style="padding:8px; border:1px solid #dee2e6; text-align:left;">${h}</th>`)
+  );
+  html += "</tr></thead><tbody>";
+
+  manualInfraEntries.forEach((row, idx) => {
+    html += "<tr>";
+    html += `<td style="padding:8px; border:1px solid #dee2e6;">${row.vmName}</td>`;
+    html += `<td style="padding:8px; border:1px solid #dee2e6;">${row.cpu}</td>`;
+    html += `<td style="padding:8px; border:1px solid #dee2e6;">${row.memory}</td>`;
+    html += `<td style="padding:8px; border:1px solid #dee2e6;">${row.cpuUtil !== "" ? row.cpuUtil : "-"}</td>`;
+    html += `<td style="padding:8px; border:1px solid #dee2e6;">${row.memUtil !== "" ? row.memUtil : "-"}</td>`;
+    if (hasAWS)
+      html += `<td style="padding:8px; border:1px solid #dee2e6;">${row.awsRegion || "-"}</td>`;
+    if (hasAzure)
+      html += `<td style="padding:8px; border:1px solid #dee2e6;">${row.azureRegion || "-"}</td>`;
+    if (hasGCP)
+      html += `<td style="padding:8px; border:1px solid #dee2e6;">${row.gcpRegion || "-"}</td>`;
+    html += `<td style="padding:8px; border:1px solid #dee2e6;">
+      <button class="btn btn-secondary" onclick="removeInfraEntry(${idx})">Remove</button>
+    </td>`;
+    html += "</tr>";
+  });
+
+  html += "</tbody>";
+  table.innerHTML = html;
+}
+
+// Build csvData/columnHeaders from manualInfraEntries
+function gatherManualInfraData() {
+  if (manualInfraEntries.length === 0) return false;
+
+  const providers = selectedProviders.length > 0 ? selectedProviders : [];
+  const headers = [
+    COLUMN_MAPPINGS.vmName,
+    COLUMN_MAPPINGS.cpu,
+    COLUMN_MAPPINGS.memory,
+    COLUMN_MAPPINGS.cpuUtilization,
+    COLUMN_MAPPINGS.memoryUtilization,
+  ];
+
+  providers.forEach((p) => {
+    const col = InstanceSelectorFactory
+      ? InstanceSelectorFactory.getProviderRegionColumn(p)
+      : (p === "aws"
+          ? COLUMN_MAPPINGS.awsRegion
+          : p === "azure"
+          ? COLUMN_MAPPINGS.azureRegion
+          : COLUMN_MAPPINGS.gcpRegion);
+    if (!headers.includes(col)) headers.push(col);
+  });
+
+  columnHeaders = headers;
+  csvData = manualInfraEntries.map((e) => {
+    const row = {};
+    row[COLUMN_MAPPINGS.vmName] = e.vmName;
+    row[COLUMN_MAPPINGS.cpu] = e.cpu;
+    row[COLUMN_MAPPINGS.memory] = e.memory;
+    row[COLUMN_MAPPINGS.cpuUtilization] =
+      e.cpuUtil !== "" ? e.cpuUtil : "";
+    row[COLUMN_MAPPINGS.memoryUtilization] =
+      e.memUtil !== "" ? e.memUtil : "";
+    providers.forEach((p) => {
+      const col = InstanceSelectorFactory
+        ? InstanceSelectorFactory.getProviderRegionColumn(p)
+        : (p === "aws"
+            ? COLUMN_MAPPINGS.awsRegion
+            : p === "azure"
+            ? COLUMN_MAPPINGS.azureRegion
+            : COLUMN_MAPPINGS.gcpRegion);
+      const defaultRegion = InstanceSelectorFactory
+        ? InstanceSelectorFactory.getProviderDefaultRegion(p)
+        : (p === "aws" ? "us-east-1" : p === "azure" ? "East US" : "us-central1-a");
+      const val =
+        p === "aws"
+          ? e.awsRegion
+          : p === "azure"
+          ? e.azureRegion
+          : e.gcpRegion;
+      row[col] = (val && val.trim()) ? val.trim() : defaultRegion;
+    });
+    return row;
+  });
+
+  return true;
+}
+
 // Generate recommendations
 function generateRecommendations() {
   console.log(
     "Starting recommendation generation with modular selector system"
   );
 
-  // Validation
-  if (csvData.length === 0) {
-    alert("Please upload a CSV file first.");
+  // Build data from the manual form if present
+  const hasManual = gatherManualInfraData();
+
+  if (!hasManual && csvData.length === 0) {
+    alert("Please add at least one VM using the form.");
     return;
   }
 
@@ -1229,3 +1408,7 @@ window.getInstanceRecommendation = function (
 
   return result;
 };
+
+// Expose manual infra helpers to window
+window.addInfraEntry = addInfraEntry;
+window.removeInfraEntry = removeInfraEntry;
